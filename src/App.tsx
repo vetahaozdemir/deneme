@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase/config';
 import { useAuth } from './hooks/useAuth';
@@ -26,6 +27,8 @@ interface AppModule {
 
 function App() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentApp, setCurrentApp] = useState<AppType>('kutuphanem');
   const [draggedItem, setDraggedItem] = useState<AppType | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -98,6 +101,22 @@ function App() {
   ];
 
   const [appModules, setAppModules] = useState<AppModule[]>(defaultAppModules);
+
+  // Sync current app with URL path
+  useEffect(() => {
+    const pathApp = location.pathname.split('/')[1] as AppType;
+    if (pathApp && pathApp !== currentApp) {
+      setCurrentApp(pathApp);
+    }
+  }, [location.pathname, currentApp]);
+
+  // Navigate when current app changes
+  useEffect(() => {
+    const targetPath = `/${currentApp}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  }, [currentApp, navigate, location.pathname]);
 
   // Load app configuration from Firebase
   const loadAppConfig = useCallback(async () => {
@@ -227,15 +246,6 @@ function App() {
   };
 
   const getVisibleModules = () => appModules.filter(module => module.isVisible !== false);
-
-  const renderCurrentApp = () => {
-    const currentModule = appModules.find(module => module.id === currentApp);
-    if (currentModule) {
-      const Component = currentModule.component;
-      return <Component />;
-    }
-    return <KutuphanemNew />;
-  };
 
   return (
     <div className="App">
@@ -409,7 +419,15 @@ function App() {
       
       {/* Main Content */}
       <div className="pt-16 pb-32 md:pb-0">
-        {renderCurrentApp()}
+        <Routes>
+          {appModules.map((module) => {
+            const Component = module.component;
+            return (
+              <Route key={module.id} path={`/${module.id}`} element={<Component />} />
+            );
+          })}
+          <Route path="/" element={<Navigate to={`/${currentApp}`} replace />} />
+        </Routes>
       </div>
     </div>
   );
