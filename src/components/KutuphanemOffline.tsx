@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useCollection } from '../hooks/useCollection';
+import { useDocument } from '../hooks/useDocument';
 import dayjs from 'dayjs';
 import localeData from 'dayjs/plugin/localeData';
 import 'dayjs/locale/tr';
@@ -108,39 +110,36 @@ const KutuphanemOffline: React.FC = () => {
     setBooks(demoBooks);
   }, []);
 
-  // Load data from Firebase
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      // Kitapları subcollection'dan yükle
-      const booksCollectionRef = collection(db, 'users', user.uid, 'library_books');
-      const booksSnapshot = await getDocs(booksCollectionRef);
-      const loadedBooks: Book[] = [];
-      
-      booksSnapshot.forEach((doc) => {
-        loadedBooks.push({ id: doc.id, ...doc.data() } as Book);
-      });
-      
-      // Ayarları ana dokümantan yükle
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      
-      if (loadedBooks.length > 0) {
-        setBooks(loadedBooks);
+  const booksPath = user ? `users/${user.uid}/library_books` : null;
+  const { data: booksData, loading: booksLoading, error: booksError } = useCollection<Book>(booksPath);
+  const userDocPath = user ? `users/${user.uid}` : null;
+  const { data: userData, error: userError } = useDocument<{ librarySettings?: Settings }>(userDocPath);
+
+  useEffect(() => {
+    if (!booksLoading) {
+      if (booksData.length > 0) {
+        setBooks(booksData);
       } else {
         loadDemoData();
       }
-      
-      if (userDocSnap.exists() && userDocSnap.data().librarySettings) {
-        setSettings(userDocSnap.data().librarySettings);
-      }
-      
-    } catch (error) {
-      console.error('Kütüphane veri yükleme hatası:', error);
+    }
+  }, [booksData, booksLoading, loadDemoData]);
+
+  useEffect(() => {
+    if (userData?.librarySettings) {
+      setSettings(userData.librarySettings);
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (booksError) {
+      console.error('Kütüphane veri yükleme hatası:', booksError);
       loadDemoData();
     }
-  }, [user, loadDemoData]);
+    if (userError) {
+      console.error('Kütüphane ayar yükleme hatası:', userError);
+    }
+  }, [booksError, userError, loadDemoData]);
 
   // Save data to Firebase
   const saveData = useCallback(async () => {
@@ -160,13 +159,6 @@ const KutuphanemOffline: React.FC = () => {
     }
   }, [user, settings]);
 
-
-  // Load data when user changes
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user, loadData]);
 
   // Save data when state changes
   useEffect(() => {

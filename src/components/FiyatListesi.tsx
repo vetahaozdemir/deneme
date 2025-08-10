@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useCollection } from '../hooks/useCollection';
 import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
 
@@ -66,6 +67,13 @@ const FiyatListesi: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'price'>('name');
+
+  const productsPath = user ? `userData/${user.uid}/products` : null;
+  const { data: productsData, loading: productsLoading, error: productsError } = useCollection<Product>(productsPath);
+  const salesPath = user ? `userData/${user.uid}/sales` : null;
+  const { data: salesData, loading: salesLoading, error: salesError } = useCollection<Sale>(salesPath);
+  const movementsPath = user ? `userData/${user.uid}/stockMovements` : null;
+  const { data: movementsData, loading: movementsLoading, error: movementsError } = useCollection<StockMovement>(movementsPath);
 
   // Load demo data
   const loadDemoData = useCallback(() => {
@@ -192,50 +200,35 @@ const FiyatListesi: React.FC = () => {
   }, []);
 
   // Load data from Firebase
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      // Load products from subcollection
-      const productsCollectionRef = collection(db, 'userData', user.uid, 'products');
-      const productsSnapshot = await getDocs(productsCollectionRef);
-      const loadedProducts: Product[] = [];
-      
-      productsSnapshot.forEach((doc) => {
-        loadedProducts.push({ id: doc.id, ...doc.data() } as Product);
-      });
-      
-      // Load sales from subcollection
-      const salesCollectionRef = collection(db, 'userData', user.uid, 'sales');
-      const salesSnapshot = await getDocs(salesCollectionRef);
-      const loadedSales: Sale[] = [];
-      
-      salesSnapshot.forEach((doc) => {
-        loadedSales.push({ id: doc.id, ...doc.data() } as Sale);
-      });
-      
-      // Load stock movements from subcollection
-      const movementsCollectionRef = collection(db, 'userData', user.uid, 'stockMovements');
-      const movementsSnapshot = await getDocs(movementsCollectionRef);
-      const loadedMovements: StockMovement[] = [];
-      
-      movementsSnapshot.forEach((doc) => {
-        loadedMovements.push({ id: doc.id, ...doc.data() } as StockMovement);
-      });
-      
-      if (loadedProducts.length > 0) {
-        setProducts(loadedProducts);
-        setSales(loadedSales);
-        setStockMovements(loadedMovements);
+  useEffect(() => {
+    if (!productsLoading) {
+      if (productsData.length > 0) {
+        setProducts(productsData);
       } else {
         loadDemoData();
       }
-      
-    } catch (error) {
+    }
+  }, [productsData, productsLoading, loadDemoData]);
+
+  useEffect(() => {
+    if (!salesLoading) {
+      setSales(salesData);
+    }
+  }, [salesData, salesLoading]);
+
+  useEffect(() => {
+    if (!movementsLoading) {
+      setStockMovements(movementsData);
+    }
+  }, [movementsData, movementsLoading]);
+
+  useEffect(() => {
+    const error = productsError || salesError || movementsError;
+    if (error) {
       console.error('Stok veri yükleme hatası:', error);
       loadDemoData();
     }
-  }, [user, loadDemoData]);
+  }, [productsError, salesError, movementsError, loadDemoData]);
 
   // Save individual product to Firebase (for new products)
   const saveProduct = async (product: Product) => {
@@ -280,13 +273,6 @@ const FiyatListesi: React.FC = () => {
     }
   };
 
-
-  // Load data when user changes
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user, loadData]);
 
   const addProduct = async () => {
     if (!formData.name || !formData.buyPrice || !formData.sellPrice) return;
