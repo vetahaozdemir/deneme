@@ -4,12 +4,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAAOugq7KQEMfaF8Zk_u-TETKwhAWMBFmg",
-  authDomain: "harcliktakip.firebaseapp.com",
-  projectId: "harcliktakip",
-  storageBucket: "harcliktakip.firebasestorage.app",
-  messagingSenderId: "522485304348",
-  appId: "1:522485304348:web:04ff1979c6f39dbef9e3d9"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY as string,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN as string,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID as string,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET as string,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID as string,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID as string,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -18,3 +18,4 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export default app;
+
