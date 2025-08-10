@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import dayjs from 'dayjs';
 import localeData from 'dayjs/plugin/localeData';
 import 'dayjs/locale/tr';
+import { DEFAULT_BOOK_GOALS, DEFAULT_THEME } from '../config/defaults';
 
 dayjs.extend(localeData);
 dayjs.locale('tr');
@@ -51,10 +52,10 @@ const KutuphanemOffline: React.FC = () => {
   const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
-    goals: { books: 24, pages: 12000, minutes: 7200 },
+    goals: DEFAULT_BOOK_GOALS,
     streak: { current: 7, longest: 15, lastDate: '2024-01-15' },
     notifications: true,
-    theme: 'dark'
+    theme: DEFAULT_THEME
   });
   type ViewType = 'library' | 'reader' | 'statistics' | 'settings';
   const [currentView, setCurrentView] = useState<ViewType>('library');

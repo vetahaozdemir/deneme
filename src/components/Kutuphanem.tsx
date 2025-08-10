@@ -11,6 +11,7 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr';
 import Okuyucu from './Okuyucu';
+import { DEFAULT_BOOK_GOALS, DEFAULT_THEME } from '../config/defaults';
 
 dayjs.extend(localeData);
 dayjs.extend(isSameOrAfter);
@@ -58,10 +59,10 @@ const Kutuphanem: React.FC = () => {
   const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
-    goals: { books: 24, pages: 12000, minutes: 7200 },
+    goals: DEFAULT_BOOK_GOALS,
     streak: { current: 0, longest: 0, lastDate: null },
     notifications: true,
-    theme: 'dark'
+    theme: DEFAULT_THEME
   });
   const [currentView, setCurrentView] = useState<'library' | 'reader' | 'statistics' | 'settings'>('library');
   const [showModal, setShowModal] = useState<'add' | 'edit' | 'progress' | 'goals' | null>(null);

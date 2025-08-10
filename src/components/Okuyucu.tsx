@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, getDoc, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { DEFAULT_THEME } from '../config/defaults';
 
 interface ReaderBook {
   id: string;
@@ -30,7 +31,7 @@ const Okuyucu: React.FC = () => {
   const [readerSettings, setReaderSettings] = useState<ReaderSettings>(() => {
     const saved = localStorage.getItem('readerSettings');
     return saved ? JSON.parse(saved) : {
-      theme: 'light',
+      theme: DEFAULT_THEME,
       fontSize: 16,
       lineHeight: 1.6,
       fontFamily: 'Manrope, sans-serif'

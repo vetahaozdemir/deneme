@@ -3,6 +3,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, serve
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { DEFAULT_BOOK_GOALS } from '../config/defaults';
 
 interface Book {
   id: string;
@@ -44,7 +45,7 @@ const KutuphanemNew: React.FC = () => {
   const [currentView, setCurrentView] = useState<'kutuphane' | 'panel'>('kutuphane');
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
-    goals: { books: 12, pages: 3000, minutes: 6000 },
+    goals: DEFAULT_BOOK_GOALS,
     streak: { current: 0, longest: 0, lastDate: null }
   });
   

@@ -10,6 +10,7 @@ import localeData from 'dayjs/plugin/localeData';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr';
+import { DEFAULT_BOOK_GOALS } from '../config/defaults';
 
 dayjs.extend(localeData);
 dayjs.extend(isSameOrAfter);
@@ -59,7 +60,7 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
   const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
-    goals: { books: 12, pages: 3000, minutes: 6000 },
+    goals: DEFAULT_BOOK_GOALS,
     streak: { current: 0, longest: 0, lastDate: null }
   });
   const [currentView, setCurrentView] = useState<'kutuphane' | 'panel'>('kutuphane');
@@ -107,12 +108,12 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
     // Settings listener
     const settingsRef = doc(db, userPath, "library_settings", "config");
     const unsubscribeSettings = onSnapshot(settingsRef, (docSnap) => {
-      const defaults = { goals: { books: 12, pages: 3000, minutes: 6000 }, streak: { current: 0, longest: 0, lastDate: null } };
+      const defaults = { goals: DEFAULT_BOOK_GOALS, streak: { current: 0, longest: 0, lastDate: null } };
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setSettings({ 
-          ...defaults, 
-          ...data, 
+        setSettings({
+          ...defaults,
+          ...data,
           goals: {...defaults.goals, ...data.goals}, 
           streak: {...defaults.streak, ...data.streak} 
         });

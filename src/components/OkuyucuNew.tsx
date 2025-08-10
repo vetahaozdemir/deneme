@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { DEFAULT_THEME } from '../config/defaults';
 
 interface Book {
   id: string;
@@ -28,7 +29,7 @@ const defaultSettings: ReaderSettings = {
   fontSize: 16,
   fontFamily: 'Georgia, serif',
   lineHeight: 1.6,
-  theme: 'light',
+  theme: DEFAULT_THEME,
   margin: 20
 };
 
