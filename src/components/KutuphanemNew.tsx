@@ -3,6 +3,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, serve
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useNotify } from '../hooks/useNotify';
 
 interface Book {
   id: string;
@@ -41,6 +42,7 @@ interface Settings {
 
 const KutuphanemNew: React.FC = () => {
   const { user } = useAuth();
+  const { notifySuccess, notifyError } = useNotify();
   const [currentView, setCurrentView] = useState<'kutuphane' | 'panel'>('kutuphane');
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
@@ -132,7 +134,7 @@ const KutuphanemNew: React.FC = () => {
       }));
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Dosya yüklenirken hata oluştu.');
+      notifyError('Dosya yüklenirken hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +160,7 @@ const KutuphanemNew: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Add book error:', error);
-      alert('Kitap eklenirken hata oluştu.');
+      notifyError('Kitap eklenirken hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +183,7 @@ const KutuphanemNew: React.FC = () => {
       setFormData({});
     } catch (error) {
       console.error('Update book error:', error);
-      alert('Kitap güncellenirken hata oluştu.');
+      notifyError('Kitap güncellenirken hata oluştu.');
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +207,7 @@ const KutuphanemNew: React.FC = () => {
       await deleteDoc(doc(db, 'users', user.uid, 'library_books', bookId));
     } catch (error) {
       console.error('Delete book error:', error);
-      alert('Kitap silinirken hata oluştu.');
+      notifyError('Kitap silinirken hata oluştu.');
     }
   };
 
@@ -268,7 +270,7 @@ const KutuphanemNew: React.FC = () => {
       }
     } catch (error) {
       console.error('Log activity error:', error);
-      alert('İlerleme kaydedilirken hata oluştu.');
+      notifyError('İlerleme kaydedilirken hata oluştu.');
     }
   };
 
@@ -282,10 +284,10 @@ const KutuphanemNew: React.FC = () => {
         goals: newSettings.goals,
         streak: newSettings.streak
       });
-      alert('Ayarlar kaydedildi.');
+      notifySuccess('Ayarlar kaydedildi.');
     } catch (error) {
       console.error('Settings save error:', error);
-      alert('Ayarlar kaydedilirken hata oluştu.');
+      notifyError('Ayarlar kaydedilirken hata oluştu.');
     }
   };
 

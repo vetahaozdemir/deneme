@@ -5,6 +5,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { db, storage } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useNotify } from '../hooks/useNotify';
 import dayjs from 'dayjs';
 import localeData from 'dayjs/plugin/localeData';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -57,6 +58,7 @@ interface KitapTakipProps {
 
 const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
   const { user } = useAuth();
+  const { notifyError } = useNotify();
   const [books, setBooks] = useState<Book[]>([]);
   const [settings, setSettings] = useState<Settings>({
     goals: { books: 12, pages: 3000, minutes: 6000 },
@@ -485,7 +487,7 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
         setEditingBook(null);
       } catch (error) {
         console.error('Kitap kaydedilirken hata:', error);
-        alert('Kitap kaydedilirken bir hata oluştu.');
+        notifyError('Kitap kaydedilirken bir hata oluştu.');
       } finally {
         setIsLoading(false);
       }

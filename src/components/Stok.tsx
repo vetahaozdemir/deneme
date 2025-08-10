@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, query, orderBy, writeBatch, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useNotify } from '../hooks/useNotify';
 
 interface Product {
   id: string;
@@ -38,6 +39,7 @@ interface CartItem {
 
 const Stok: React.FC = () => {
   const { user } = useAuth();
+  const { notifySuccess, notifyWarning, notifyError } = useNotify();
   const [currentView, setCurrentView] = useState<'satis' | 'stok' | 'gecmis'>('satis');
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -173,7 +175,7 @@ const Stok: React.FC = () => {
       setBulkItems([{ name: '', quantity: 1, buyPrice: 0, sellPrice: 0 }]);
     } catch (error) {
       console.error('Bulk add error:', error);
-      alert('Ürünler eklenirken bir hata oluştu.');
+      notifyError('Ürünler eklenirken bir hata oluştu.');
     }
   };
 
@@ -193,7 +195,7 @@ const Stok: React.FC = () => {
       setStockAmount(1);
     } catch (error) {
       console.error('Add stock error:', error);
-      alert('Stok eklenirken bir hata oluştu.');
+      notifyError('Stok eklenirken bir hata oluştu.');
     }
   };
 
@@ -206,7 +208,7 @@ const Stok: React.FC = () => {
     if (existingItem) {
       const newQuantity = existingItem.quantity + cartQuantity;
       if (newQuantity > selectedProduct.quantity) {
-        alert('Stokta yeterli ürün yok!');
+        notifyWarning('Stokta yeterli ürün yok!');
         return;
       }
       setCart(cart.map(item => 
@@ -237,7 +239,7 @@ const Stok: React.FC = () => {
   // Complete sale
   const handleSale = async () => {
     if (!user || cart.length === 0 || !buyerName.trim()) {
-      alert('Lütfen alıcı adını girin ve sepete ürün ekleyin.');
+      notifyWarning('Lütfen alıcı adını girin ve sepete ürün ekleyin.');
       return;
     }
     
@@ -287,10 +289,10 @@ const Stok: React.FC = () => {
       // Clear cart and buyer name
       setCart([]);
       setBuyerName('');
-      alert('Satış başarıyla tamamlandı!');
+      notifySuccess('Satış başarıyla tamamlandı!');
     } catch (error) {
       console.error('Sale error:', error);
-      alert('Satış tamamlanırken bir hata oluştu.');
+      notifyError('Satış tamamlanırken bir hata oluştu.');
     }
   };
 
@@ -302,7 +304,7 @@ const Stok: React.FC = () => {
       await deleteDoc(doc(db, 'userData', user.uid, 'products', productId));
     } catch (error) {
       console.error('Delete product error:', error);
-      alert('Ürün silinirken bir hata oluştu.');
+      notifyError('Ürün silinirken bir hata oluştu.');
     }
   };
 
@@ -349,10 +351,10 @@ const Stok: React.FC = () => {
       batch.delete(transactionRef);
       
       await batch.commit();
-      alert('İşlem silindi ve stoklar geri yüklendi.');
+      notifySuccess('İşlem silindi ve stoklar geri yüklendi.');
     } catch (error) {
       console.error('Delete transaction error:', error);
-      alert('İşlem silinirken bir hata oluştu.');
+      notifyError('İşlem silinirken bir hata oluştu.');
     }
   };
 

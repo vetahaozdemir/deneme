@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useNotify } from '../hooks/useNotify';
 import dayjs from 'dayjs';
 import 'dayjs/locale/tr';
 
@@ -52,6 +53,7 @@ interface Sale {
 
 const FiyatListesi: React.FC = () => {
   const { user } = useAuth();
+  const { notifyWarning } = useNotify();
   const [currentView, setCurrentView] = useState<'dashboard' | 'products' | 'stock-movements' | 'sales' | 'reports' | 'settings'>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
@@ -421,7 +423,7 @@ const FiyatListesi: React.FC = () => {
     
     // Check if there's enough stock
     if (selectedProduct.stock < saleData.quantity) {
-      alert('Yetersiz stok! Mevcut stok: ' + selectedProduct.stock);
+      notifyWarning('Yetersiz stok! Mevcut stok: ' + selectedProduct.stock);
       return;
     }
     

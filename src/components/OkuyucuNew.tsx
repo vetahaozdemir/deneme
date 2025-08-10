@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useNotify } from '../hooks/useNotify';
 
 interface Book {
   id: string;
@@ -38,6 +39,7 @@ const OkuyucuNew: React.FC = () => {
   const [isReading, setIsReading] = useState(false);
   const [settings, setSettings] = useState<ReaderSettings>(defaultSettings);
   const [showSettings, setShowSettings] = useState(false);
+  const { notifyError } = useNotify();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showBookModal, setShowBookModal] = useState(false);
   const [newBookData, setNewBookData] = useState({
@@ -126,7 +128,7 @@ const OkuyucuNew: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading EPUB:', error);
-      alert('Kitap yüklenirken hata oluştu');
+      notifyError('Kitap yüklenirken hata oluştu');
     }
   };
 
@@ -145,7 +147,7 @@ const OkuyucuNew: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading PDF:', error);
-      alert('PDF yüklenirken hata oluştu');
+      notifyError('PDF yüklenirken hata oluştu');
     }
   };
 
@@ -196,7 +198,7 @@ const OkuyucuNew: React.FC = () => {
       setShowBookModal(false);
     } catch (error) {
       console.error('Error adding book:', error);
-      alert('Kitap eklenirken hata oluştu');
+      notifyError('Kitap eklenirken hata oluştu');
     }
   };
 
@@ -207,7 +209,7 @@ const OkuyucuNew: React.FC = () => {
         await deleteDoc(doc(db, 'books', bookId));
       } catch (error) {
         console.error('Error deleting book:', error);
-        alert('Kitap silinirken hata oluştu');
+        notifyError('Kitap silinirken hata oluştu');
       }
     }
   };

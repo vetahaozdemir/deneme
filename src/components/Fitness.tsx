@@ -4,6 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line } from 'react-chartjs-2';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
+import { useNotify } from '../hooks/useNotify';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -54,6 +55,7 @@ const exerciseDatabase = {
 
 const Fitness: React.FC = () => {
   const { user } = useAuth();
+  const { notifySuccess, notifyError } = useNotify();
   const [currentTab, setCurrentTab] = useState<'strength' | 'cardio'>('strength');
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [lastWeight, setLastWeight] = useState<WeightEntry | null>(null);
@@ -106,8 +108,11 @@ const Fitness: React.FC = () => {
   };
 
   const showAlert = (message: string, isSuccess = false) => {
-    // Simple alert for now - could be replaced with toast component
-    alert(message);
+    if (isSuccess) {
+      notifySuccess(message);
+    } else {
+      notifyError(message);
+    }
   };
 
   // Load data on mount
