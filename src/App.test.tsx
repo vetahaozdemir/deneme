@@ -2,8 +2,14 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+// Mock the authentication hook to avoid Firebase dependency during tests
+jest.mock('./hooks/useAuth', () => ({
+  useAuth: () => ({ user: null, loading: false })
+}));
+
+test('shows authentication screen when user is not logged in', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  const heading = screen.getByText(/Tahaveli Unified/i);
+  expect(heading).toBeInTheDocument();
 });
+
