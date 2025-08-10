@@ -10,6 +10,8 @@ import localeData from 'dayjs/plugin/localeData';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/tr';
+import * as yup from 'yup';
+import FormInput from './form/FormInput';
 
 dayjs.extend(localeData);
 dayjs.extend(isSameOrAfter);
@@ -466,26 +468,51 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverPreview, setCoverPreview] = useState(editingBook?.coverUrl || 'https://placehold.co/96x144/1f2937/9ca3af?text=Kapak');
     const [isLoading, setIsLoading] = useState(false);
+    const [errors, setErrors] = useState<{ title?: string; author?: string; totalPages?: string }>({});
+
+    const bookSchema = yup.object().shape({
+      title: yup.string().required('Kitap adı gerekli'),
+      author: yup.string().required('Yazar gerekli'),
+      totalPages: yup
+        .number()
+        .typeError('Sayfa sayısı gerekli')
+        .min(1, 'Sayfa sayısı 1 veya daha fazla olmalı')
+        .required('Sayfa sayısı gerekli')
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsLoading(true);
-      
+      setErrors({});
+
       try {
+        const dataToValidate = {
+          ...formData,
+          totalPages: isAudio ? timeToMinutes(totalTime.h, totalTime.m) : formData.totalPages
+        };
+
+        await bookSchema.validate(dataToValidate, { abortEarly: false });
+
         const bookData: Partial<Book> = {
           ...formData,
           id: editingBook?.id,
-          totalPages: isAudio 
-            ? timeToMinutes(totalTime.h, totalTime.m)
-            : formData.totalPages
+          totalPages: dataToValidate.totalPages
         };
 
         await saveBook(bookData, coverFile || undefined);
         setShowBookModal(false);
         setEditingBook(null);
       } catch (error) {
-        console.error('Kitap kaydedilirken hata:', error);
-        alert('Kitap kaydedilirken bir hata oluştu.');
+        if (error instanceof yup.ValidationError) {
+          const errObj: { title?: string; author?: string; totalPages?: string } = {};
+          error.inner.forEach((e) => {
+            if (e.path) errObj[e.path as keyof typeof errObj] = e.message;
+          });
+          setErrors(errObj);
+        } else {
+          console.error('Kitap kaydedilirken hata:', error);
+          alert('Kitap kaydedilirken bir hata oluştu.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -512,53 +539,44 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
           
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div className="flex items-center gap-4">
-              <img 
-                src={coverPreview} 
-                alt="Kapak Önizleme" 
+              <img
+                src={coverPreview}
+                alt="Kapak Önizleme"
                 className="w-24 h-36 object-cover rounded-md bg-gray-800"
               />
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-400 mb-2">Kapak Yükle</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  accept="image/*"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-300 hover:file:bg-indigo-500/30"
                 />
               </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-400">Kitap Adı</label>
-              <input 
-                type="text" 
-                required 
-                className="form-input mt-1" 
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-              />
-            </div>
+
+            <FormInput
+              label="Kitap Adı"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              error={errors.title}
+              className="mt-1"
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400">Yazar</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="form-input mt-1" 
-                  value={formData.author}
-                  onChange={(e) => setFormData({...formData, author: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400">Yayınevi</label>
-                <input 
-                  type="text" 
-                  className="form-input mt-1" 
-                  value={formData.publisher}
-                  onChange={(e) => setFormData({...formData, publisher: e.target.value})}
-                />
-              </div>
+              <FormInput
+                label="Yazar"
+                value={formData.author}
+                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                error={errors.author}
+                className="mt-1"
+              />
+              <FormInput
+                label="Yayınevi"
+                value={formData.publisher}
+                onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
+                className="mt-1"
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -593,36 +611,36 @@ const KitapTakip: React.FC<KitapTakipProps> = ({ onNavigateToReader }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-400">Toplam Süre</label>
                 <div className="flex gap-2 mt-1">
-                  <input 
-                    type="number" 
-                    min="0" 
-                    placeholder="sa" 
-                    className="form-input" 
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="sa"
+                    className="form-input"
                     value={totalTime.h}
-                    onChange={(e) => setFormData({...formData, totalPages: timeToMinutes(e.target.value, totalTime.m)})}
+                    onChange={(e) => setFormData({ ...formData, totalPages: timeToMinutes(parseInt(e.target.value) || 0, totalTime.m) })}
                   />
-                  <input 
-                    type="number" 
-                    min="0" 
-                    max="59" 
-                    placeholder="dk" 
-                    className="form-input" 
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    placeholder="dk"
+                    className="form-input"
                     value={totalTime.m}
-                    onChange={(e) => setFormData({...formData, totalPages: timeToMinutes(totalTime.h, e.target.value)})}
+                    onChange={(e) => setFormData({ ...formData, totalPages: timeToMinutes(totalTime.h, parseInt(e.target.value) || 0) })}
                   />
                 </div>
+                {errors.totalPages && <p className="text-red-400 text-xs mt-1">{errors.totalPages}</p>}
               </div>
             ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-400">Toplam Sayfa</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  className="form-input mt-1" 
-                  value={formData.totalPages}
-                  onChange={(e) => setFormData({...formData, totalPages: parseInt(e.target.value) || 0})}
-                />
-              </div>
+              <FormInput
+                label="Toplam Sayfa"
+                type="number"
+                min="1"
+                value={formData.totalPages}
+                onChange={(e) => setFormData({ ...formData, totalPages: parseInt(e.target.value) || 0 })}
+                error={errors.totalPages}
+                className="mt-1"
+              />
             )}
           </form>
           

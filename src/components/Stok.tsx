@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, query, orderBy, writeBatch, getDocs, where } from 'firebase/firestore';
+import * as yup from 'yup';
+import FormInput from './form/FormInput';
 import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
 
@@ -52,8 +54,31 @@ const Stok: React.FC = () => {
   
   // Form states
   const [bulkItems, setBulkItems] = useState([{ name: '', quantity: 1, buyPrice: 0, sellPrice: 0 }]);
+  const [bulkErrors, setBulkErrors] = useState<{ name?: string; quantity?: string; buyPrice?: string; sellPrice?: string }[]>([{}]);
   const [stockAmount, setStockAmount] = useState(1);
   const [cartQuantity, setCartQuantity] = useState(1);
+
+  const bulkSchema = yup.array().of(
+    yup.object().shape({
+      name: yup.string().required('Ürün adı gerekli'),
+      quantity: yup
+        .number()
+        .typeError('Adet sayı olmalı')
+        .integer('Adet tam sayı olmalı')
+        .positive('Adet 0 dan büyük olmalı')
+        .required('Adet gerekli'),
+      buyPrice: yup
+        .number()
+        .typeError('Alış fiyatı gerekli')
+        .positive('Alış fiyatı 0 dan büyük olmalı')
+        .required('Alış fiyatı gerekli'),
+      sellPrice: yup
+        .number()
+        .typeError('Satış fiyatı gerekli')
+        .positive('Satış fiyatı 0 dan büyük olmalı')
+        .required('Satış fiyatı gerekli')
+    })
+  );
 
   // Load data from Firebase
   const loadData = useCallback(() => {
@@ -132,18 +157,17 @@ const Stok: React.FC = () => {
   // Add multiple products/stock
   const handleBulkAdd = async () => {
     if (!user) return;
-    
+
     try {
+      await bulkSchema.validate(bulkItems, { abortEarly: false });
       const batch = writeBatch(db);
       const productsRef = collection(db, 'userData', user.uid, 'products');
-      
+
       for (const item of bulkItems) {
-        if (!item.name.trim() || item.quantity <= 0 || item.buyPrice <= 0 || item.sellPrice <= 0) continue;
-        
         // Check if product exists
         const existingQuery = query(productsRef, where('name', '==', item.name.trim()));
         const existingSnapshot = await getDocs(existingQuery);
-        
+
         if (!existingSnapshot.empty) {
           // Product exists, update quantity and prices
           const existingDoc = existingSnapshot.docs[0];
@@ -167,13 +191,27 @@ const Stok: React.FC = () => {
           });
         }
       }
-      
+
       await batch.commit();
       setShowBulkAddModal(false);
       setBulkItems([{ name: '', quantity: 1, buyPrice: 0, sellPrice: 0 }]);
+      setBulkErrors([{}]);
     } catch (error) {
-      console.error('Bulk add error:', error);
-      alert('Ürünler eklenirken bir hata oluştu.');
+      if (error instanceof yup.ValidationError) {
+        const errors = bulkItems.map(() => ({}) as { name?: string; quantity?: string; buyPrice?: string; sellPrice?: string });
+        error.inner.forEach((e) => {
+          const match = e.path?.match(/\[(\d+)\]\.(.*)/) || e.path?.match(/(\d+)\.(.*)/);
+          if (match) {
+            const index = parseInt(match[1], 10);
+            const field = match[2] as keyof typeof errors[0];
+            errors[index][field] = e.message;
+          }
+        });
+        setBulkErrors(errors);
+      } else {
+        console.error('Bulk add error:', error);
+        alert('Ürünler eklenirken bir hata oluştu.');
+      }
     }
   };
 
@@ -800,54 +838,73 @@ const Stok: React.FC = () => {
             <div className="max-h-96 overflow-y-auto mb-4">
               {bulkItems.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2 mb-3 items-center">
-                  <input
-                    type="text"
+                  <FormInput
                     value={item.name}
                     onChange={(e) => {
                       const newItems = [...bulkItems];
                       newItems[index].name = e.target.value;
                       setBulkItems(newItems);
+                      const newErrors = [...bulkErrors];
+                      if (newErrors[index]?.name) newErrors[index].name = undefined;
+                      setBulkErrors(newErrors);
                     }}
                     placeholder="Ürün Adı"
-                    className="col-span-4 form-input text-sm"
+                    containerClassName="col-span-4"
+                    className="text-sm"
+                    error={bulkErrors[index]?.name}
                   />
-                  <input
+                  <FormInput
                     type="number"
                     value={item.quantity}
                     onChange={(e) => {
                       const newItems = [...bulkItems];
                       newItems[index].quantity = parseInt(e.target.value) || 1;
                       setBulkItems(newItems);
+                      const newErrors = [...bulkErrors];
+                      if (newErrors[index]?.quantity) newErrors[index].quantity = undefined;
+                      setBulkErrors(newErrors);
                     }}
                     placeholder="Adet"
                     min="1"
-                    className="col-span-1 form-input text-sm"
+                    containerClassName="col-span-1"
+                    className="text-sm"
+                    error={bulkErrors[index]?.quantity}
                   />
-                  <input
+                  <FormInput
                     type="number"
                     value={item.buyPrice}
                     onChange={(e) => {
                       const newItems = [...bulkItems];
                       newItems[index].buyPrice = parseFloat(e.target.value) || 0;
                       setBulkItems(newItems);
+                      const newErrors = [...bulkErrors];
+                      if (newErrors[index]?.buyPrice) newErrors[index].buyPrice = undefined;
+                      setBulkErrors(newErrors);
                     }}
                     placeholder="Alış ₺"
                     min="0"
                     step="0.01"
-                    className="col-span-2 form-input text-sm"
+                    containerClassName="col-span-2"
+                    className="text-sm"
+                    error={bulkErrors[index]?.buyPrice}
                   />
-                  <input
+                  <FormInput
                     type="number"
                     value={item.sellPrice}
                     onChange={(e) => {
                       const newItems = [...bulkItems];
                       newItems[index].sellPrice = parseFloat(e.target.value) || 0;
                       setBulkItems(newItems);
+                      const newErrors = [...bulkErrors];
+                      if (newErrors[index]?.sellPrice) newErrors[index].sellPrice = undefined;
+                      setBulkErrors(newErrors);
                     }}
                     placeholder="Satış ₺"
                     min="0"
                     step="0.01"
-                    className="col-span-2 form-input text-sm"
+                    containerClassName="col-span-2"
+                    className="text-sm"
+                    error={bulkErrors[index]?.sellPrice}
                   />
                   <div className="col-span-2 text-center">
                     <div className="text-blue-400 font-semibold text-xs">
@@ -862,6 +919,7 @@ const Stok: React.FC = () => {
                       onClick={() => {
                         if (bulkItems.length > 1) {
                           setBulkItems(bulkItems.filter((_, i) => i !== index));
+                          setBulkErrors(bulkErrors.filter((_, i) => i !== index));
                         }
                       }}
                       className="text-red-500 hover:text-red-400 transition-colors"
@@ -876,7 +934,10 @@ const Stok: React.FC = () => {
             
             <div className="flex justify-between items-center border-t border-white/10 pt-4">
               <button
-                onClick={() => setBulkItems([...bulkItems, { name: '', quantity: 1, buyPrice: 0, sellPrice: 0 }])}
+                onClick={() => {
+                  setBulkItems([...bulkItems, { name: '', quantity: 1, buyPrice: 0, sellPrice: 0 }]);
+                  setBulkErrors([...bulkErrors, {}]);
+                }}
                 className="secondary-btn"
               >
                 <i className="fa-solid fa-plus mr-2"></i>

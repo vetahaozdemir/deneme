@@ -1,31 +1,49 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import * as yup from 'yup';
+import FormInput from './form/FormInput';
 import { auth } from '../firebase/config';
 
 const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    const schema = yup.object().shape({
+      email: yup.string().email('Geçerli bir e-posta girin').required('E-posta gerekli'),
+      password: yup.string().min(6, 'Şifre en az 6 karakter olmalı').required('Şifre gerekli')
+    });
 
-    try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      setFieldErrors({});
+      setLoading(true);
+
+      try {
+        await schema.validate({ email, password }, { abortEarly: false });
+        if (isLogin) {
+          await signInWithEmailAndPassword(auth, email, password);
+        } else {
+          await createUserWithEmailAndPassword(auth, email, password);
+        }
+      } catch (err: any) {
+        if (err.name === 'ValidationError') {
+          const errors: { email?: string; password?: string } = {};
+          err.inner.forEach((e: any) => {
+            if (e.path) errors[e.path as 'email' | 'password'] = e.message;
+          });
+          setFieldErrors(errors);
+        } else {
+          setError(mapAuthError(err.code));
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      setError(mapAuthError(err.code));
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   const mapAuthError = (code: string) => {
     const errorMap: { [key: string]: string } = {
@@ -58,41 +76,37 @@ const AuthScreen: React.FC = () => {
             {isLogin ? 'Giriş Yap' : 'Kayıt Ol'}
           </h2>
           
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <input 
-                type="email" 
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <FormInput
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="E-posta Adresi" 
-                required 
+                placeholder="E-posta Adresi"
+                error={fieldErrors.email}
                 className="w-full p-3 bg-gray-700/50 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
-            </div>
-            
-            <div>
-              <input 
-                type="password" 
+
+              <FormInput
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={isLogin ? 'Şifre' : 'Şifre (en az 6 karakter)'}
-                required 
+                error={fieldErrors.password}
                 className="w-full p-3 bg-gray-700/50 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
-            </div>
-            
-            {error && (
-              <div className="text-red-400 text-sm text-center">{error}</div>
-            )}
-            
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
-            >
-              {loading ? 'Yükleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
-            </button>
-          </form>
+
+              {error && (
+                <div className="text-red-400 text-sm text-center">{error}</div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition duration-300"
+              >
+                {loading ? 'Yükleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+              </button>
+            </form>
           
           <div className="text-center text-sm text-gray-400">
             <span>{isLogin ? 'Hesabın yok mu?' : 'Zaten hesabın var mı?'}</span>
